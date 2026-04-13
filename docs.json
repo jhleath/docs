@@ -119,7 +119,6 @@
               "docs/sandbox/pty",
               "docs/sandbox/ssh-access",
               "docs/sandbox/connect-bucket",
-              "docs/sandbox/rate-limits",
               "docs/sandbox/secured-access",
               "docs/sandbox/ip-tunneling",
               "docs/sandbox/custom-domain"
@@ -3712,6 +3711,11 @@
     }
   },
   "redirects": [
+    {
+      "source": "/docs/sandbox/rate-limits",
+      "destination": "/docs/billing",
+      "permanent": true
+    },
     {
       "source": "/docs/template/aliases",
       "destination": "/docs/template/names",
