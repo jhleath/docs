@@ -1212,6 +1212,98 @@ paths:
       summary: List template tags
     servers:
     - *id001
+  /volumes:
+    get:
+      description: List all team volumes
+      tags:
+      - Volumes
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Successfully listed all team volumes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Volume'
+        '401':
+          $ref: '#/components/responses/401'
+        '500':
+          $ref: '#/components/responses/500'
+      operationId: listVolumes
+    post:
+      description: Create a new team volume
+      tags:
+      - Volumes
+      security:
+      - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewVolume'
+      responses:
+        '201':
+          description: Successfully created a new team volume
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeAndToken'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '500':
+          $ref: '#/components/responses/500'
+      operationId: postVolumes
+    servers:
+    - *id001
+  /volumes/{volumeID}:
+    get:
+      description: Get team volume info
+      tags:
+      - Volumes
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/volumeID'
+      responses:
+        '200':
+          description: Successfully retrieved a team volume
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeAndToken'
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '500':
+          $ref: '#/components/responses/500'
+      operationId: getVolume
+    delete:
+      description: Delete a team volume
+      tags:
+      - Volumes
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/volumeID'
+      responses:
+        '204':
+          description: Successfully deleted a team volume
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '500':
+          $ref: '#/components/responses/500'
+      operationId: deleteVolume
+    servers:
+    - *id001
   /health:
     get:
       summary: Check the health of the service
@@ -2473,6 +2565,9 @@ components:
           type: integer
           description: Used virtual memory in bytes
           format: int64
+        mem_cache:
+          type: integer
+          description: Cached memory (page cache) in bytes
         mem_total_mib:
           type: integer
           description: Total virtual memory in MiB
@@ -3333,6 +3428,24 @@ components:
       properties:
         enabled:
           $ref: '#/components/schemas/SandboxAutoResumeEnabled'
+    SandboxOnTimeout:
+      type: string
+      description: Action taken when the sandbox times out.
+      enum:
+      - kill
+      - pause
+    SandboxLifecycle:
+      type: object
+      description: Sandbox lifecycle policy returned by sandbox info.
+      required:
+      - autoResume
+      - onTimeout
+      properties:
+        autoResume:
+          type: boolean
+          description: Whether the sandbox can auto-resume.
+        onTimeout:
+          $ref: '#/components/schemas/SandboxOnTimeout'
     SandboxLog:
       description: Log entry with timestamp and line
       required:
@@ -3404,6 +3517,7 @@ components:
       - cpuUsedPct
       - memUsed
       - memTotal
+      - memCache
       - diskUsed
       - diskTotal
       properties:
@@ -3432,6 +3546,10 @@ components:
           type: integer
           format: int64
           description: Total memory in bytes
+        memCache:
+          type: integer
+          format: int64
+          description: Cached memory (page cache) in bytes
         diskUsed:
           type: integer
           format: int64
@@ -3537,6 +3655,12 @@ components:
           description: 'Access token for authenticating envd requests to this sandbox.
             Only returned when the sandbox is created with `secure: true`. Null for
             non-secure sandboxes (envd endpoints work without auth).'
+        allowInternetAccess:
+          type:
+          - boolean
+          - 'null'
+          description: Whether internet access was explicitly enabled or disabled
+            for the sandbox. Null means it was not explicitly set.
         domain:
           type:
           - string
@@ -3553,6 +3677,10 @@ components:
           $ref: '#/components/schemas/SandboxMetadata'
         state:
           $ref: '#/components/schemas/SandboxState'
+        network:
+          $ref: '#/components/schemas/SandboxNetworkConfig'
+        lifecycle:
+          $ref: '#/components/schemas/SandboxLifecycle'
         volumeMounts:
           type: array
           items:
@@ -4373,10 +4501,48 @@ components:
           items:
             type: string
       type: object
+    Volume:
+      type: object
+      properties:
+        volumeID:
+          type: string
+          description: ID of the volume
+        name:
+          type: string
+          description: Name of the volume
+      required:
+      - volumeID
+      - name
+    VolumeAndToken:
+      type: object
+      properties:
+        volumeID:
+          type: string
+          description: ID of the volume
+        name:
+          type: string
+          description: Name of the volume
+        token:
+          type: string
+          description: Auth token to use for interacting with volume content
+      required:
+      - volumeID
+      - name
+      - token
+    NewVolume:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the volume
+          pattern: ^[a-zA-Z0-9_-]+$
+      required:
+      - name
 tags:
 - name: Sandboxes
 - name: Templates
 - name: Tags
+- name: Volumes
 - name: Envd
 - name: Filesystem
 - name: Process

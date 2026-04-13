@@ -1144,13 +1144,13 @@ def _has_admin_token_security(path_item: dict[str, Any]) -> bool:
 def filter_paths(spec: dict[str, Any]) -> None:
     """Clean up paths that should not appear in the public spec.
 
-    - Removes access-token and api-key endpoints
+    - Removes access-token, api-key endpoints
     - Removes endpoints using AdminToken auth
     - Strips Supabase auth entries from all operations
     - Removes Supabase and AdminToken securityScheme definitions
     """
     # Remove excluded paths
-    excluded_prefixes = ("/access-tokens", "/api-keys", "/volumes")
+    excluded_prefixes = ("/access-tokens", "/api-keys")
     excluded_exact = {"/init"}
     to_remove = [
         p for p in spec["paths"]
@@ -1165,7 +1165,7 @@ def filter_paths(spec: dict[str, Any]) -> None:
     for path in to_remove:
         del spec["paths"][path]
     if to_remove:
-        print(f"==> Removed {len(to_remove)} paths (volumes, admin, internal)")
+        print(f"==> Removed {len(to_remove)} paths (admin, internal)")
 
     # Strip supabase security entries from all operations
     for path_item in spec["paths"].values():
@@ -1329,8 +1329,9 @@ def rename_and_reorder_tags(spec: dict[str, Any]) -> None:
         "auth": "Teams",
         "health": "Envd",
         "files": "Filesystem",
+        "volumes": "Volumes",
     }
-    TAG_ORDER = ["Sandboxes", "Templates", "Tags", "Envd", "Filesystem", "Process", "Teams"]
+    TAG_ORDER = ["Sandboxes", "Templates", "Tags", "Volumes", "Envd", "Filesystem", "Process", "Teams"]
 
     # Rename tags on all operations; tag untagged ones as "Others"
     for path_item in spec.get("paths", {}).values():
