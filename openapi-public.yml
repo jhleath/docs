@@ -1586,7 +1586,8 @@ paths:
                 $ref: '#/components/schemas/filesystem.CreateWatcherResponse'
         '502': *id003
       security:
-      - *id005
+      - SandboxAccessTokenAuth: []
+        SandboxUserAuth: []
     servers:
     - *id004
   /filesystem.Filesystem/GetWatcherEvents:
@@ -1654,7 +1655,8 @@ paths:
                 $ref: '#/components/schemas/filesystem.ListDirResponse'
         '502': *id003
       security:
-      - *id005
+      - SandboxAccessTokenAuth: []
+        SandboxUserAuth: []
     servers:
     - *id004
   /filesystem.Filesystem/MakeDir:
@@ -1688,7 +1690,8 @@ paths:
                 $ref: '#/components/schemas/filesystem.MakeDirResponse'
         '502': *id003
       security:
-      - *id005
+      - SandboxAccessTokenAuth: []
+        SandboxUserAuth: []
     servers:
     - *id004
   /filesystem.Filesystem/Move:
@@ -1722,7 +1725,8 @@ paths:
                 $ref: '#/components/schemas/filesystem.MoveResponse'
         '502': *id003
       security:
-      - *id005
+      - SandboxAccessTokenAuth: []
+        SandboxUserAuth: []
     servers:
     - *id004
   /filesystem.Filesystem/Remove:
@@ -1756,7 +1760,8 @@ paths:
                 $ref: '#/components/schemas/filesystem.RemoveResponse'
         '502': *id003
       security:
-      - *id005
+      - SandboxAccessTokenAuth: []
+        SandboxUserAuth: []
     servers:
     - *id004
   /filesystem.Filesystem/RemoveWatcher:
@@ -1824,7 +1829,8 @@ paths:
                 $ref: '#/components/schemas/filesystem.StatResponse'
         '502': *id003
       security:
-      - *id005
+      - SandboxAccessTokenAuth: []
+        SandboxUserAuth: []
     servers:
     - *id004
   /filesystem.Filesystem/WatchDir:
@@ -1849,7 +1855,8 @@ paths:
                 $ref: '#/components/schemas/filesystem.WatchDirResponse'
         '502': *id003
       security:
-      - *id005
+      - SandboxAccessTokenAuth: []
+        SandboxUserAuth: []
       parameters:
       - &id006
         name: Connect-Protocol-Version
@@ -2052,7 +2059,8 @@ paths:
                 $ref: '#/components/schemas/process.StartResponse'
         '502': *id003
       security:
-      - *id005
+      - SandboxAccessTokenAuth: []
+        SandboxUserAuth: []
       parameters:
       - *id006
       - *id007
@@ -2264,6 +2272,12 @@ components:
         (on connect), [POST /sandboxes/{sandboxID}/resume](/docs/api-reference/sandboxes/resume-a-sandbox)
         (on resume), and [GET /sandboxes/{sandboxID}](/docs/api-reference/sandboxes/get-a-sandbox)
         (for running or paused sandboxes).'
+    SandboxUserAuth:
+      type: http
+      scheme: basic
+      description: Optional system user for the operation. Sets file ownership and
+        resolves relative paths. Pass the desired username with no password. Defaults
+        to the sandbox's default user when omitted.
   parameters:
     FilePath:
       name: path

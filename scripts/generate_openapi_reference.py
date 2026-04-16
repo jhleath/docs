@@ -90,6 +90,7 @@ SANDBOX_TAG = "x-e2b-server"
 
 # Security scheme name for envd endpoints (must not collide with platform's AccessTokenAuth)
 SANDBOX_AUTH_SCHEME = "SandboxAccessTokenAuth"
+SANDBOX_USER_SCHEME = "SandboxUserAuth"
 
 # ---------------------------------------------------------------------------
 # Proto parsing — auto-detect streaming RPCs
@@ -575,6 +576,17 @@ def setup_sandbox_auth_scheme(spec: dict[str, Any]) -> None:
             "and [GET /sandboxes/{sandboxID}](/docs/api-reference/sandboxes/get-a-sandbox) (for running or paused sandboxes)."
         ),
     }
+    # Optional Basic auth for setting the system user on sandbox operations.
+    # The SDK sends: Authorization: Basic <base64("username:")>
+    schemes[SANDBOX_USER_SCHEME] = {
+        "type": "http",
+        "scheme": "basic",
+        "description": (
+            "Optional system user for the operation. Sets file ownership and resolves "
+            "relative paths. Pass the desired username with no password. "
+            "Defaults to the sandbox's default user when omitted."
+        ),
+    }
 
 
 # Mapping of (path, method) to desired operationId for the public docs.
@@ -614,6 +626,20 @@ STREAMING_ENDPOINTS = {
     "/process.Process/Start",
     "/process.Process/Connect",
     "/process.Process/StreamInput",
+}
+
+# Connect-RPC endpoints that accept an optional user via Authorization header.
+# The SDK sends: Authorization: Basic <base64("username:")>
+# This is not part of the protobuf message — it must be added as an OpenAPI parameter.
+USER_HEADER_ENDPOINTS = {
+    "/process.Process/Start",
+    "/filesystem.Filesystem/ListDir",
+    "/filesystem.Filesystem/MakeDir",
+    "/filesystem.Filesystem/Move",
+    "/filesystem.Filesystem/Remove",
+    "/filesystem.Filesystem/Stat",
+    "/filesystem.Filesystem/WatchDir",
+    "/filesystem.Filesystem/CreateWatcher",
 }
 
 
@@ -1113,6 +1139,32 @@ def fix_spec_issues(spec: dict[str, Any]) -> None:
             print(f"    {f}")
 
 
+def add_user_auth_security(spec: dict[str, Any]) -> None:
+    """Add optional Basic auth (user) security to Connect-RPC endpoints that support it.
+
+    The sandbox resolves user from an Authorization: Basic header where the
+    username encodes the desired OS user. This is a transport-level concern
+    not captured in the proto definitions, so we inject it during post-processing.
+
+    Endpoints that support user get two security options (OR):
+      - SandboxAccessTokenAuth only (uses default user)
+      - SandboxAccessTokenAuth + SandboxUserAuth (custom user)
+    """
+    paths = spec.get("paths", {})
+    count = 0
+    for ep_path in USER_HEADER_ENDPOINTS:
+        path_item = paths.get(ep_path, {})
+        op = path_item.get("post")
+        if not op:
+            continue
+        op["security"] = [
+            {SANDBOX_AUTH_SCHEME: [], SANDBOX_USER_SCHEME: []},
+        ]
+        count += 1
+    if count:
+        print(f"==> Added optional user auth (Basic) to {count} Connect-RPC endpoints")
+
+
 def _strip_supabase_security(path_item: dict[str, Any]) -> None:
     """Remove Supabase security entries from all operations in a path item.
 
@@ -1455,6 +1507,7 @@ def main() -> None:
         setup_sandbox_auth_scheme(merged)
         add_operation_ids(merged)
         fix_spec_issues(merged)
+        add_user_auth_security(merged)
 
         # Remove internal/unwanted paths
         filter_paths(merged)
