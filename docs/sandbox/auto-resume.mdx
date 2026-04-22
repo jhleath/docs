@@ -1,14 +1,16 @@
 ---
-title: "AutoResume"
-sidebarTitle: AutoResume
+title: "Auto-resume on request"
+sidebarTitle: Auto-resume on request
+description: "Manage sandbox lifecycle and auto-resume on activity."
 ---
 
-Many workloads don't need a sandbox running all the time, but when they do need it, it should just work, whether it was paused or not.
+Many workloads don't need a sandbox running all the time, but when they do, it should just work — whether the sandbox was paused or not.
 
-`AutoResume` handles this automatically: a paused sandbox wakes up when activity arrives, so your code does not have to check or manage sandbox state.
-Configure it through the `lifecycle` object when creating a sandbox.
+Auto-resume handles this automatically: a paused sandbox wakes up when activity arrives, so your code doesn't have to check or manage sandbox state. Auto-resume builds on the sandbox [persistence](/docs/sandbox/persistence) lifecycle.
 
-## Configure lifecycle on create
+## Configure
+
+Set the `lifecycle` object when creating a sandbox to control what happens on timeout and whether paused sandboxes should auto-resume.
 
 <CodeGroup>
 ```js JavaScript & TypeScript
@@ -35,24 +37,18 @@ sandbox = Sandbox.create(
 ```
 </CodeGroup>
 
-## Lifecycle options
+### Lifecycle options
 
-- `onTimeout` / `on_timeout`
-  - `kill` (default): sandbox is terminated when timeout is reached
-  - `pause`: sandbox is paused when timeout is reached
-- `autoResume` / `auto_resume`
-  - `false` (default): paused sandboxes do not auto-resume
-  - `true`: paused sandboxes auto-resume on activity
-  - `true` is valid only when `onTimeout`/`on_timeout` is `pause`
+The `lifecycle` object accepts the following options:
 
-## Behavior summary
+| Setting | Option | Description |
+|---------|--------|-------------|
+| `onTimeout` (JavaScript) / `on_timeout` (Python) | `"kill"` | (default) Sandbox is terminated when timeout is reached |
+| | `"pause"` | Sandbox is paused when timeout is reached |
+| `autoResume` (JavaScript) / `auto_resume` (Python) | `false` | (default) Paused sandboxes do not auto-resume |
+| | `true` | Paused sandboxes auto-resume on activity. Valid only when `onTimeout` / `on_timeout` is set to `"pause"` |
 
-- Default behavior is equivalent to `onTimeout: "kill"` with `autoResume: false`.
-- `onTimeout: "pause"` with `autoResume: false` gives auto-pause without auto-resume.
-- `onTimeout: "pause"` with `autoResume: true` gives auto-pause with auto-resume.
-- [`Sandbox.connect()`](/docs/sandbox/connect) can still be used to resume a paused sandbox manually.
-
-If you use `autoResume: false`, resume explicitly with [`Sandbox.connect()`](/docs/sandbox/connect).
+If `lifecycle.autoResume` / `lifecycle.auto_resume` is falsy or unset, you can still resume a paused sandbox manually with [`Sandbox.connect()`](/docs/sandbox/connect).
 
 ## Timeout after auto-resume
 
@@ -68,25 +64,27 @@ For example, if you create a sandbox with a 2-minute timeout:
 
 If you create a sandbox with a 1-hour timeout, the auto-resume timeout will also be 1 hour, since it exceeds the 5-minute minimum.
 
-This cycle repeats every time the sandbox auto-resumes — the lifecycle configuration (`onTimeout: "pause"` + `autoResume: true`) is persistent across pause/resume cycles.
+This cycle repeats every time the sandbox auto-resumes — the lifecycle configuration is persistent across pause/resume cycles.
 
 <Note>
-You can change the timeout after the sandbox resumes by calling `setTimeout`/`set_timeout`. See [Change sandbox timeout during runtime](/docs/sandbox#change-sandbox-timeout-during-runtime).
+You can change the timeout after the sandbox resumes by calling `setTimeout()` (JavaScript) / `set_timeout()` (Python). See [Change sandbox timeout during runtime](/docs/sandbox#change-sandbox-timeout-during-runtime).
 </Note>
 
 ## What counts as activity
 
-Auto-resume is triggered by the sandbox activity - that's both HTTP traffic and controlling the sandbox from the SDK.
+Auto-resume is triggered by sandbox activity — both HTTP traffic and SDK operations.
 
-That includes SDK operations like:
+That includes:
 - `sandbox.commands.run(...)`
 - `sandbox.files.read(...)`
 - `sandbox.files.write(...)`
-- opening a tunneled app URL or sending requests to a service running inside the sandbox
+- Opening a tunneled app URL or sending requests to a service running inside the sandbox
 
-If a sandbox is paused and `autoResume` is enabled, the next supported operation resumes it automatically. You do not need to call [`Sandbox.connect()`](/docs/sandbox/connect) first.
+If a sandbox is paused and `lifecycle.autoResume` (JavaScript) / `lifecycle.auto_resume` (Python) is enabled, the next supported operation resumes it automatically. You do not need to call [`Sandbox.connect()`](/docs/sandbox/connect) first.
 
 ### SDK example: pause, then read a file
+
+The following example writes a file, pauses the sandbox, then reads the file back. The read operation triggers an automatic resume.
 
 <CodeGroup>
 ```js JavaScript & TypeScript
@@ -127,108 +125,16 @@ print(f"State after read: {sandbox.get_info().state}")
 ```
 </CodeGroup>
 
-## Use cases
+## Example: Web server with auto-resume
 
-### Web and dev/preview servers
+Auto-resume is especially useful for web servers and preview environments. When an HTTP request arrives at a paused sandbox, the sandbox wakes up automatically to handle it.
 
-Use `onTimeout: "pause"` + `autoResume: true` so inbound traffic can wake a paused sandbox automatically.
-This works for both:
-- Basic web/API servers
-- Dev or preview servers you open occasionally
+The following example starts a simple HTTP server and retrieves its public URL. Use [`getHost()`](/docs/sandbox/internet-access#sandbox-public-url) (JavaScript) / [`get_host()`](/docs/sandbox/internet-access#sandbox-public-url) (Python) to get the sandbox's publicly accessible hostname for a given port.
 
 <CodeGroup>
 ```js JavaScript & TypeScript
 import { Sandbox } from 'e2b'
 
-const sandbox = await Sandbox.create({
-  timeoutMs: 10 * 60 * 1000,
-  lifecycle: {
-    onTimeout: 'pause',
-    autoResume: true,
-  },
-})
-
-await sandbox.commands.run(
-  `python3 -m pip -q install 'flask>=2.2'`
-)
-
-await sandbox.files.write(
-  '/home/user/app.py',
-  [
-    'from flask import Flask',
-    'app = Flask(__name__)',
-    '@app.route("/")',
-    'def hello():',
-    '    return "Hello, World!"',
-    'app.run(host="0.0.0.0", port=3000)',
-    '',
-  ].join('\n')
-)
-
-await sandbox.commands.run(
-  'python3 -u /home/user/app.py > /home/user/flask.log 2>&1',
-  { background: true }
-)
-
-await new Promise((resolve) => setTimeout(resolve, 1000))
-
-const previewHost = sandbox.getHost(3000)
-console.log(`Preview URL: https://${previewHost}`)
-
-console.log(`Status before pause: ${(await sandbox.getInfo()).state}`)
-await sandbox.pause()
-console.log(`Status after pause: ${(await sandbox.getInfo()).state}`)
-```
-```python Python
-import time
-
-from e2b import Sandbox
-
-sandbox = Sandbox.create(
-    timeout=10 * 60,
-    lifecycle={
-        "on_timeout": "pause",
-        "auto_resume": True,
-    },
-)
-
-sandbox.commands.run("python3 -m pip -q install 'flask>=2.2'")
-
-sandbox.files.write(
-    "/home/user/app.py",
-    'from flask import Flask\n'
-    'app = Flask(__name__)\n'
-    '@app.route("/")\n'
-    'def hello():\n'
-    '    return "Hello, World!"\n'
-    'app.run(host="0.0.0.0", port=3000)\n'
-)
-
-sandbox.commands.run(
-    "python3 -u /home/user/app.py > /home/user/flask.log 2>&1",
-    background=True,
-)
-
-time.sleep(1)
-
-preview_host = sandbox.get_host(3000)
-print(f"Preview URL: https://{preview_host}")
-
-print(f"Status before pause: {sandbox.get_info().state}")
-sandbox.pause()
-print(f"Status after pause: {sandbox.get_info().state}")
-```
-</CodeGroup>
-
-### Agent/tool execution
-
-For queued tasks or tool calls, create once and keep using the same sandbox handle. If it is paused, it will auto-resume when you run the next command.
-
-<CodeGroup>
-```js JavaScript & TypeScript
-import { Sandbox } from 'e2b'
-
-// One-time setup
 const sandbox = await Sandbox.create({
   timeoutMs: 5 * 60 * 1000,
   lifecycle: {
@@ -237,18 +143,15 @@ const sandbox = await Sandbox.create({
   },
 })
 
-// Later: called for each agent/tool task
-async function runToolTask(command) {
-  const result = await sandbox.commands.run(command)
-  return result.stdout
-}
+await sandbox.commands.run('python3 -m http.server 3000', { background: true })
 
-console.log(await runToolTask('python -c "print(2 + 2)"'))
+const host = sandbox.getHost(3000)
+// Once the sandbox times out and pauses, any request to the preview URL will automatically resume it.
+console.log(`Preview URL: https://${host}`)
 ```
 ```python Python
 from e2b import Sandbox
 
-# One-time setup
 sandbox = Sandbox.create(
     timeout=5 * 60,
     lifecycle={
@@ -257,72 +160,17 @@ sandbox = Sandbox.create(
     },
 )
 
-# Later: called for each agent/tool task
-def run_tool_task(command: str) -> str:
-    result = sandbox.commands.run(command)
-    return result.stdout
+sandbox.commands.run("python3 -m http.server 3000", background=True)
 
-print(run_tool_task('python -c "print(2 + 2)"'))
-```
-</CodeGroup>
-
-### Per-user sandboxes
-
-For multi-tenant apps, keep a map of sandbox IDs by user. On each request, connect to the user's existing sandbox (which auto-resumes if paused) or create a new one.
-
-<CodeGroup>
-```js JavaScript & TypeScript
-import { Sandbox } from 'e2b'
-
-const userSandboxes = new Map() // userId → Sandbox
-
-async function getSandbox(userId) {
-  let sandbox = userSandboxes.get(userId)
-
-  if (!sandbox) {
-    sandbox = await Sandbox.create({
-      timeoutMs: 5 * 60 * 1000,
-      lifecycle: {
-        onTimeout: 'pause',
-        autoResume: true,
-      },
-    })
-    userSandboxes.set(userId, sandbox)
-  }
-
-  return sandbox
-}
-
-// On each user request (auto-resumes if paused)
-const sandbox = await getSandbox('user-123')
-const result = await sandbox.commands.run('echo "Hello from your sandbox"')
-console.log(result.stdout)
-```
-```python Python
-from e2b import Sandbox
-
-user_sandboxes: dict[str, Sandbox] = {}  # user_id → Sandbox
-
-def get_sandbox(user_id: str) -> Sandbox:
-    if user_id not in user_sandboxes:
-        user_sandboxes[user_id] = Sandbox.create(
-            timeout=5 * 60,
-            lifecycle={
-                "on_timeout": "pause",
-                "auto_resume": True,
-            },
-        )
-
-    return user_sandboxes[user_id]
-
-# On each user request (auto-resumes if paused)
-sandbox = get_sandbox("user-123")
-result = sandbox.commands.run('echo "Hello from your sandbox"')
-print(result.stdout)
+host = sandbox.get_host(3000)
+# Once the sandbox times out and pauses, any request to the preview URL will automatically resume it.
+print(f"Preview URL: https://{host}")
 ```
 </CodeGroup>
 
 ## Cleanup
-Auto-resume is persistent, meaning if your sandbox resumes and later times out again, it will pause again.
+
+Auto-resume is persistent — if your sandbox resumes and later times out again, it will pause again.
 Each time the sandbox resumes, it gets a fresh timeout (at least 5 minutes, or longer if the original creation timeout exceeds that) — so the sandbox keeps cycling between running and paused as long as activity arrives.
+
 If you call `.kill()`, the sandbox is permanently deleted and cannot be resumed.
