@@ -53,7 +53,7 @@ resp = requests.post(
     json={
         "name": "My Sandbox Webhook",
         "url": "https://your-webhook-endpoint.com/webhook",
-        "enabled": true,
+        "enabled": True,
         "events": ["sandbox.lifecycle.created", "sandbox.lifecycle.updated", "sandbox.lifecycle.killed"],
         "signatureSecret": "secret-for-event-signature-verification"
     }
@@ -99,7 +99,7 @@ resp = requests.get(
 
 if resp.status_code == 200:
     print("Webhooks listed successfully")
-    print(response.json())
+    print(resp.json())
 ```
 </CodeGroup>
 
@@ -124,7 +124,7 @@ const webhookConfig = await resp.json()
 console.log(webhookConfig)
 // {
 //   "id": "<webhook-id>",
-//   "teamID": "<your-team-id>",
+//   "teamId": "<your-team-id>",
 //   "name": "My Sandbox Webhook",
 //   "createdAt": "2025-08-06T21:00:00Z",
 //   "enabled": true,
@@ -148,7 +148,7 @@ webhook_config = resp.json()
 print(webhook_config)
 # {
 #   "id": "<webhook-id>",
-#   "teamID": "<your-team-id>",
+#   "teamId": "<your-team-id>",
 #   "name": "My Sandbox Webhook",
 #   "createdAt": "2025-08-06T21:00:00Z",
 #   "enabled": true,
@@ -251,10 +251,13 @@ The payload structure matches the event format from the API:
 
 ```json
 {
-  "version": "v2",
   "id": "<event-id>",
+  "version": "v2",
   "type": "<sandbox-event-type>",
-  "eventData": {
+  "timestamp": "2025-08-06T20:59:24Z",
+  "event_category": "lifecycle",
+  "event_label": "kill",
+  "event_data": {
     "sandbox_metadata": {
       "<custom-key>": "<custom-value>"
     },
@@ -262,19 +265,18 @@ The payload structure matches the event format from the API:
       "started_at": "2025-08-06T20:58:24Z",
       "vcpu_count": 2,
       "memory_mb": 512,
-      "execution_time": 1000,
+      "execution_time": 1000
     }
   },
-  "sandboxBuildId": "<template-build-id>",
-  "sandboxExecutionId": "<sandbox-unique-execution-id>",
-  "sandboxId": "<your-sandbox-id>",
-  "sandboxTeamId": "<your-team-id>",
-  "sandboxTemplateId": "<your-template-id>",
-  "timestamp": "2025-08-06T20:59:24Z"
+  "sandbox_id": "<your-sandbox-id>",
+  "sandbox_execution_id": "<sandbox-unique-execution-id>",
+  "sandbox_template_id": "<your-template-id>",
+  "sandbox_build_id": "<template-build-id>",
+  "sandbox_team_id": "<your-team-id>"
 }
 ```
 
-`eventData.execution` contains sandbox execution details and is included on `sandbox.lifecycle.killed` and `sandbox.lifecycle.paused` events:
+`event_data.execution` contains sandbox execution details and is included on `sandbox.lifecycle.killed` and `sandbox.lifecycle.paused` events:
 
 - `started_at` - UTC RFC3339 timestamp when the current sandbox execution started
 - `vcpu_count` - Number of vCPUs assigned to the sandbox
