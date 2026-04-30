@@ -57,6 +57,7 @@
               "docs/agents/amp",
               "docs/agents/claude-code",
               "docs/agents/codex",
+              "docs/agents/devin",
               "docs/agents/openai-agents-sdk",
               {
                 "group": "OpenClaw",
