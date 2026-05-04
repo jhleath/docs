@@ -31,6 +31,10 @@ template = Template(
 
 Every template starts with a base image that provides the foundation for your sandbox environment.
 
+<Warning>
+E2B currently supports only Debian-based images. Your base image must be Debian or a Debian derivative (e.g., `debian`, `ubuntu`, `python`, `node`). Alpine, RedHat-based, and other non-Debian distributions are not supported.
+</Warning>
+
 ### Predefined base images
 
 Use convenience methods for common base images with Ubuntu, Debian, Python, Node.js, or Bun:
