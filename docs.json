@@ -16,6 +16,11 @@
     }
   },
   "favicon": "/favicon.png",
+  "banner": {
+    "content": "Maintenance May 12, 8–9 PM PDT (May 13, 03:00–04:00 UTC). ~1 min downtime in sandbox management possible. Running sandboxes unaffected.",
+    "type": "warning",
+    "dismissible": true
+  },
   "navigation": {
     "anchors": [
       {
