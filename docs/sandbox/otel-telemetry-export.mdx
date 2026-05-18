@@ -1,0 +1,55 @@
+---
+title: "OTEL telemetry export"
+sidebarTitle: OTEL telemetry export
+---
+
+E2B can export OpenTelemetry (OTEL) metrics and logs to any OpenTelemetry-compatible destination with an OTLP HTTP endpoint.
+This lets you integrate E2B telemetry with your existing monitoring and observability stack.
+
+<Note>
+OTEL telemetry export is available for Enterprise customers, including BYOC deployments.
+If you're interested in OTEL telemetry export, please book a call with our team [here](https://e2b.dev/contact) or contact us at [enterprise@e2b.dev](mailto:enterprise@e2b.dev).
+</Note>
+
+## Exported telemetry
+
+Exported telemetry mirrors the metrics and logs available in the E2B dashboard.
+
+- Metrics are emitted under the `e2b.*` namespace.
+- Logs include `service_name: e2b`.
+
+Metrics include sandbox resource usage, such as CPU and memory usage. These metrics help you monitor sandbox health and capacity from your existing observability tools.
+
+Logs include sandbox lifecycle events, such as sandbox start and stop events, along with other sandbox actions. These logs help you correlate sandbox activity with application behavior and infrastructure events.
+
+E2B sends telemetry using OTLP over HTTP/protobuf. Your endpoint should accept OTLP HTTP metrics and logs traffic, such as `/v1/metrics` and `/v1/logs` paths on an OpenTelemetry Collector.
+
+Refer to your provider's documentation for specific OTLP endpoint details and authentication requirements.
+
+## Setup
+
+During onboarding, provide E2B with the endpoint details for your OTEL collector or observability backend:
+
+- OTLP HTTP endpoint URL
+- Authentication requirements, such as static headers or bearer tokens
+
+For BYOC deployments, E2B can configure telemetry export from your BYOC environment to your own collector or backend.
+
+## Delivery behavior
+
+Telemetry export is best effort. E2B tries to send metrics and logs continuously and retries whenever possible.
+
+If your endpoint is unavailable, unreachable, or rejects telemetry, some metrics or logs may be delayed or dropped.
+
+## Confirm telemetry delivery
+
+After E2B enables the export, start one or more sandboxes and wait a few minutes for telemetry to reach your destination.
+
+In your collector or observability backend, confirm that:
+
+- Metrics are emitted under the `e2b.*` namespace.
+- Logs include `service_name: e2b`.
+
+You can compare the received telemetry with the metrics and logs shown in the E2B dashboard.
+
+If telemetry does not appear, verify the OTLP endpoint URL, authentication headers, and any networking requirements such as allowlists or private connectivity.

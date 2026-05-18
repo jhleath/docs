@@ -114,6 +114,7 @@
               "docs/sandbox/auto-resume",
               "docs/sandbox/git-integration",
               "docs/sandbox/metrics",
+              "docs/sandbox/otel-telemetry-export",
               "docs/sandbox/metadata",
               "docs/sandbox/environment-variables",
               "docs/sandbox/list",
