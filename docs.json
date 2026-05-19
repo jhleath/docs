@@ -71,6 +71,13 @@
             ]
           },
           {
+            "group": "Storage integrations",
+            "pages": [
+              "docs/storage/archil",
+              "docs/storage/cloud-buckets"
+            ]
+          },
+          {
             "group": "Code interpreting",
             "pages": [
               {
@@ -122,7 +129,6 @@
               "docs/sandbox/internet-access",
               "docs/sandbox/pty",
               "docs/sandbox/ssh-access",
-              "docs/sandbox/connect-bucket",
               "docs/sandbox/secured-access",
               "docs/sandbox/ip-tunneling",
               "docs/sandbox/custom-domain"
@@ -3715,6 +3721,11 @@
     }
   },
   "redirects": [
+    {
+      "source": "/docs/sandbox/connect-bucket",
+      "destination": "/docs/storage/cloud-buckets",
+      "permanent": true
+    },
     {
       "source": "/docs/sandbox/rate-limits",
       "destination": "/docs/billing",
