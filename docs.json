@@ -71,7 +71,7 @@
             ]
           },
           {
-            "group": "Storage integrations",
+            "group": "Storage",
             "pages": [
               "docs/storage/archil",
               "docs/storage/cloud-buckets"
