@@ -1,0 +1,89 @@
+---
+title: "Archil"
+sidebarTitle: Archil
+description: "Mount Archil's elastic POSIX file system in your E2B sandbox for high-performance, shared access to S3, R2, and GCS object storage."
+---
+
+[Archil](https://archil.com) is an infinite, elastic, POSIX file system that automatically synchronizes to object storage like S3, R2, and GCS. Use Archil when you need to mount a bucket to your E2B sandbox but want higher out-of-the-box performance than `s3fs` or `gcsfuse` — it's a natural fit for parallel agents that share state.
+
+Key properties:
+
+- Shared SSD read and write caching in front of your object storage bucket for higher performance.
+- Mounted as a regular POSIX directory, so any tool, script, or agent in the sandbox can use it.
+- Scales to whatever your sandbox writes — you pay only for what you use.
+- [Mountable by many sandboxes at once](https://docs.archil.com/concepts/shared-disks) for shared state across parallel agents.
+
+## Build a template
+
+Build a template with the `archil` CLI preinstalled. The Archil package depends on `libfuse2`, so we apt-install it before running the installer.
+
+<CodeGroup>
+
+```ts JavaScript & TypeScript
+const template = Template()
+  .fromTemplate("code-interpreter-v1")
+  .aptInstall(["libfuse2", "ca-certificates"])
+  .runCmd("curl -fsSL https://archil.com/install | sh")
+```
+
+
+```python Python
+template = (
+    Template()
+    .from_template("code-interpreter-v1")
+    .apt_install(["libfuse2", "ca-certificates"])
+    .run_cmd("curl -fsSL https://archil.com/install | sh")
+)
+```
+
+</CodeGroup>
+
+## Mount the disk
+
+At sandbox runtime, mount the disk with a [disk-scoped mount token](https://docs.archil.com/concepts/disk-users#disk-token-authorization) from the [Archil console](https://console.archil.com).
+
+<CodeGroup isRunnable={false}>
+```js JavaScript & TypeScript
+import { Sandbox } from 'e2b'
+
+const sandbox = await Sandbox.create('<your template id>')
+await sandbox.commands.run('sudo mkdir -p /home/user/archil')
+await sandbox.commands.run(
+  'sudo ARCHIL_MOUNT_TOKEN=<disk-token> archil mount <disk-name-or-id> /home/user/archil --region <region>'
+)
+await sandbox.commands.run('sudo chown user:user /home/user/archil')
+```
+
+```python Python
+from e2b import Sandbox
+
+sandbox = Sandbox.create("<your template id>")
+sandbox.commands.run("sudo mkdir -p /home/user/archil")
+sandbox.commands.run(
+    "sudo ARCHIL_MOUNT_TOKEN=<disk-token> archil mount <disk-name-or-id> /home/user/archil --region <region>"
+)
+sandbox.commands.run("sudo chown user:user /home/user/archil")
+```
+</CodeGroup>
+
+`<disk-name-or-id>` is either an owner-qualified name (`myorg/my-disk`) or a disk ID (`dsk-0123456789abcdef`); `<region>` is the disk's region (e.g. `aws-us-east-1`). The disk is now mounted at `/home/user/archil` as a regular POSIX directory — any tool, script, or agent in the sandbox can read and write through it.
+
+## Unmount before killing the sandbox
+
+Call `archil unmount` before tearing down the sandbox. It's best practice to release filesystem resources cleanly rather than letting the sandbox kill take them down.
+
+<CodeGroup isRunnable={false}>
+```js JavaScript & TypeScript
+await sandbox.commands.run('sudo archil unmount /home/user/archil')
+await sandbox.kill()
+```
+
+```python Python
+sandbox.commands.run("sudo archil unmount /home/user/archil")
+sandbox.kill()
+```
+</CodeGroup>
+
+## Sharing across sandboxes
+
+The same disk can be mounted by multiple sandboxes concurrently. Add `--shared` to the mount command — see [Shared Disks](https://docs.archil.com/concepts/shared-disks) for the checkout-based concurrency model.
